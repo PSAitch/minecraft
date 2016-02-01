@@ -38,15 +38,22 @@ check_mc(){
 		echo "Minecraft JAR not found"
 		return 1
 	fi
-	EULA_ACCEPT="$(sudo grep eula "$EULA_LOC" | awk -F'=' '{print $2}')"
+	EULA_ACCEPT="$(sudo grep eula "$EULA_LOC" | awk -F'=' '{print $2}' | tr -d '[[:space:]]')"
 #	echo "EULA:"$EULA_ACCEPT
-	if [ $EULA_ACCEPT == "true" ] ; then
-		echo "EULA Accepted"
-		return 0
-	else
-		echo "EULA not accepted"
-		return 1
-	fi
+	case $EULA_ACCEPT in
+		true)
+			echo "EULA Accepted"
+			return 0
+			;;
+		false)
+			echo "EULA not accepted"
+			return 1
+			;;
+		*)
+		        echo "EULA:"$EULA_ACCEPT
+#			return 1
+			;;
+	esac
 }
 
 get_mc(){
