@@ -1,5 +1,17 @@
-#!/bin/bash
-# minecraft : Minecraft service
+#!/bin/sh
+
+### BEGIN INIT INFO
+# Provides:          minecraft
+# Required-Start:    $remote_fs $syslog
+# Required-Stop:     $remote_fs $syslog
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# X-Interactive:     false
+# Short-Description: Minecraft Server
+# Description:       This file determines how the Minecraft server should start and stop
+#                    placed in /etc/init.d.
+### END INIT INFO
+
 
 MC_ROOT="/srv/minecraft"
 MC_VERSION="$(sudo grep server_version= /etc/minecraft.conf | awk -F'=' '{print $2}')"
