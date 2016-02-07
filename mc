@@ -7,7 +7,6 @@ MC_FILE_GET="https://s3.amazonaws.com/Minecraft.Download/versions/"$MC_VERSION"/
 MC_FILE="minecraft_server."$MC_VERSION".jar"
 MC_EULA="eula.txt"
 MC_FILE_LOC=$MC_ROOT"/"$MC_FILE
-#MC_SERVER_NAME="$(sudo grep server= /etc/minecraft.conf | awk -F'=' '{print $2}')"
 EULA_LOC=$MC_ROOT"/"$MC_EULA
 
 cd_mc(){
@@ -20,8 +19,6 @@ run_mc(){
 }
 
 rinse_mc(){
-#        MC_FILE_LOC="/srv/minecraft/"$MC_FILE
-#        EULA_LOC="/srv/minecraft/"$MC_EULA
         if [ -f $MC_FILE_LOC ] ; then
                 echo "Removing "$MC_FILE_LOC
                 rm $MC_FILE_LOC
@@ -30,8 +27,6 @@ rinse_mc(){
 }
 
 check_mc(){
-#	MC_FILE_LOC="/srv/minecraft/"$MC_FILE
-#	EULA_LOC="/srv/minecraft/"$MC_EULA
 	if [ -f $MC_FILE_LOC ] ; then
 		echo "Minecraft Present "
 	else
@@ -39,7 +34,6 @@ check_mc(){
 		return 1
 	fi
 	EULA_ACCEPT="$(sudo grep eula "$EULA_LOC" | awk -F'=' '{print $2}' | tr -d '[[:space:]]')"
-#	echo "EULA:"$EULA_ACCEPT
 	case $EULA_ACCEPT in
 		true)
 			echo "EULA Accepted"
@@ -51,7 +45,7 @@ check_mc(){
 			;;
 		*)
 		        echo "EULA:"$EULA_ACCEPT
-#			return 1
+			return 1
 			;;
 	esac
 }
@@ -90,6 +84,21 @@ case $1 in
 			echo "Bad"
 		fi
 		;;
+	mods)
+		if [ -d $MC_ROOT/mods ]; then
+			sudo ls $MC_ROOT/mods
+		else
+			echo "No mods folder"
+		fi
+		;;
+	properties)
+		if [ -z $2 ] ; then
+			sudo cat $MC_ROOT/server.properties
+		else
+		        MC_PROP="$(sudo grep "$2" "$MC_ROOT"/server.properties | awk -F'=' '{print $2}')"
+			echo $2"="$MC_PROP
+		fi
+		;;
 #	service)
 #		case $2 in
 #			deploy)
@@ -120,17 +129,11 @@ case $1 in
 #		esac
 #		;;
 	test)
-#		MC_OK=check_mc $1
-#		if [[  $MC_OK==1 ]] ; then
-#		if [ check_mc $1 ] ; then
-#			echo "Minecraft not OK : "$MC_OK
-#		elif [ $2 !="" ] ; then
-#			run_mc $2
-#		elif [ $SERVER_NAME !="" ] ; then
-#			run_mc $SERVER_NAME
-#		else
+		if  check_mc  ; then
 			run_mc
-#		fi
+		else
+			echo "Minecraft not OK : "$MC_OK
+		fi
 		;;
 #	start)
 #		cd_mc
@@ -142,6 +145,17 @@ case $1 in
 #                screen -r minecraft sudo java -Xms512M -Xmx512M -jar minecraft_server.jar nogui
 #		sudo stop minecraft
  #               ;;
+	status)
+		MC_STATUS="$(sudo ps all | grep java | grep -v grep | tr -d '[[:space:]]')"
+		if [ -z $MC_STATUS ] ; then
+			echo "Minecraft Not Running"
+			exit 1
+		else
+			echo $MC_STATUS
+			echo "minecraft running"
+			exit 0
+		fi
+		;;
 	*)
 		echo "Usage mc [ parameters | test | check ]"
 		echo "Usage mc install [ force ]"
