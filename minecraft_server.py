@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import SocketServer
 import subprocess
 import threading
@@ -135,7 +136,7 @@ class MyTCPHandler(SocketServer.BaseRequestHandler):
             # clean up
             print "Clean Up"
             
-class MC_Thread(Thread):# thread type
+class MC_Thread(threading.Thread):# thread type
     """
     This is the thread that will run the Minecraft proccess
     it declares properties for accessing the I/O streams
@@ -175,7 +176,7 @@ class MC_Server (object):
         return self.MC_Process.is_alive()
 
     def serve_forever(self):
-        MC_Process.start()
+        self.MC_Process.start()
         while keep_running() :
             self.RPC_Server.handle_request()
             
@@ -190,12 +191,12 @@ Usage
     minecraft_server.py [ port=<port> ] [ host=<host> ]
         start the Minecraft service rununing
             """
-    elif _getSwitch('start',sys.argv)==0:
+    elif 'start' in sys.argv:
         mc_Server=MC_Server()
         # Activate the server; this will keep running until you
         # interrupt the program with Ctrl-C
         mc_Server.serve_forever()
-    elif _getSwitch('stop',sys.argv)==0:
+    elif 'stop' in sys.argv:
         print "Please connect to the server instance and issue the /stop command"
         # or construct an HTTP request to localhost to stop the service
     else:

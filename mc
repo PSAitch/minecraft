@@ -10,7 +10,7 @@ case $1 in
 		sudo rm /etc/init.d/minecraft
 		;;
 	test)
-		sudo /usr/src/minecraft_server.py $2
+		sudo python /usr/src/minecraft_server.py $2
 		;;
 	*)
 		echo "Usage deploy [ install | regress ]"

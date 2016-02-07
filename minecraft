@@ -106,10 +106,10 @@ case $1 in
 		fi
 		;;
 	start)
-		sudo /usr/src/minecraft_server.py start
+		sudo python /usr/src/minecraft_server.py start
 		;;
 	stop)
-		sudo /usr/src/minecraft_server.py stop
+		sudo python /usr/src/minecraft_server.py stop
 		;;
 	status)
 		MC_STATUS="$(sudo ps all | grep java | grep -v grep | tr -d '[[:space:]]')"
