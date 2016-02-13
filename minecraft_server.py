@@ -4,7 +4,11 @@ import subprocess
 import threading
 import sys
 import io
+import os
 
+import time
+
+INI_FILE='/etc/minecraft.conf'
 # code to extract a switch from an argument list 
 def _getSwitch(sSwitch,sArray):
     try:
@@ -68,6 +72,14 @@ def _getIntParam(sParam,sArray,iDefault=-1):
     except:
         print "Unhandled Exception" , sys.exc_info()[0]
 
+def _getIniValue(sParam):
+	fIni=io.open(INI_FILE)
+	liIni=fIni.readlines(-1)
+	fIni.close()
+	vRet=_getStrParam(sParam,liIni,'')
+	return vRet.strip()
+#	return '1.8.9'
+
 class MyTCPHandler(SocketServer.BaseRequestHandler):
     """
     The RequestHandler class for our server.
@@ -108,8 +120,8 @@ class MyTCPHandler(SocketServer.BaseRequestHandler):
                 print send_text
                 self.server.MC_Process.MC_Input.writeline(send_text)
                 resp=self.server.MC_Process.MC_Output.readline()
-#                self.server.MC_Process.proc.stdin.writeline(send_text)
-#                resp=self.server.MC_Process.proc.stdout.readline()
+                self.server.MC_Process.proc.stdin.writeline(send_text)
+                resp=self.server.MC_Process.proc.stdout.readline()
                 self.request.sendall(resp)
             elif sPage =="/api/get":
                 resp=self.server.MC_Process.proc.stdout.readline()
@@ -152,11 +164,18 @@ class MC_Thread(threading.Thread):# thread type
     def MC_CmdLine(self):
         # establish memory capacity
         # modify params for memory
-        return ['sudo','java','-Xms512M','-Xmx512M','-jar','minecraft_server.jar','nogui']
-    def run():
-        self.proc=Popen(self.MC_CmdLine(),stdout=PIPE,stdin=PIPE,stderr=PIPE)
+	mc_version=_getIniValue('server_version')
+	mc_path='minecraft_server.'+mc_version+'.jar'
+        return ['sudo','java','-Xms512M','-Xmx512M','-jar',mc_path,'nogui']
+    def run(self):
+	self.cmd=self.MC_CmdLine()
+        os.chdir('/srv/minecraft')
+        self.proc=subprocess.Popen(self.cmd,stdout=subprocess.PIPE,stdin=subprocess.PIPE,stderr=subprocess.PIPE)
+#        self.proc=subprocess.Popen(self.cmd,stdin=subprocess.PIPE)
         self.MC_Input=self.proc.stdin
         self.MC_Output=self.proc.stdout
+	while self.Live():
+		outLine=self.MC_Output.readline()
 #        self.MC_Result=subprocess.call(MINECRAFT_CMDLINE, stdin=self.MC_Input,stdout=self.MC_Output,stderr=self.MC_Output)
         
 class MC_Server (object):
@@ -167,18 +186,20 @@ class MC_Server (object):
     both of these elements need to be contained in a separate thread
     
     """
-    def init(self):
+    def __init__(self):
         self.MC_Process=MC_Thread()
         self.RPC_Server=SocketServer.TCPServer((HOST, PORT), MyTCPHandler())
         self.RPC_Server.MC_Process=self.MC_Process
 
     def keep_running(self):
         return self.MC_Process.is_alive()
+#	return 1
 
     def serve_forever(self):
         self.MC_Process.start()
-        while keep_running() :
+        while self.keep_running() :
             self.RPC_Server.handle_request()
+#	    time.sleep(10)
             
 if __name__ == "__main__":    
     PORT=_getIntParam('port',sys.argv,8000)
