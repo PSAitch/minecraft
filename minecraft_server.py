@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import socket
 import SocketServer
 import subprocess
 import threading
@@ -7,8 +8,13 @@ import io
 import os
 
 import time
-
+# fied strings
+FREE_MEM_CMD="""free -t -m | grep Mem | awk '{print $4}'"""
 INI_FILE='/etc/minecraft.conf'
+LOG_FILE='/var/log/minecraft.log'
+KILL_SIGNAL='/api/send?command=/stop'
+KILL_RESP_OK='OK'
+KILL_RESP_BAD='BD'
 # code to extract a switch from an argument list 
 def _getSwitch(sSwitch,sArray):
     try:
@@ -78,9 +84,8 @@ def _getIniValue(sParam):
 	fIni.close()
 	vRet=_getStrParam(sParam,liIni,'')
 	return vRet.strip()
-#	return '1.8.9'
 
-class MyTCPHandler(SocketServer.BaseRequestHandler):
+class MinecraftTCPHandler(SocketServer.BaseRequestHandler):
     """
     The RequestHandler class for our server.
 
@@ -94,10 +99,8 @@ class MyTCPHandler(SocketServer.BaseRequestHandler):
         self.data = self.request.recv(1024).strip()
         print "{} wrote:".format(self.client_address[0])
         print self.data
-        # reply with repeat data
-#        self.request.sendall(self.data.upper())
         try:
-            print "Service the request"
+#            print "Service the request"
             
             p=self.data.rfind("?")+1
             sp=self.data.find(" ")+1
@@ -120,9 +123,12 @@ class MyTCPHandler(SocketServer.BaseRequestHandler):
                 print send_text
                 self.server.MC_Process.MC_Input.writeline(send_text)
                 resp=self.server.MC_Process.MC_Output.readline()
-                self.server.MC_Process.proc.stdin.writeline(send_text)
-                resp=self.server.MC_Process.proc.stdout.readline()
-                self.request.sendall(resp)
+#                self.server.MC_Process.proc.stdin.writeline(send_text)
+#                resp=self.server.MC_Process.proc.stdout.readline()
+		if send_text=='/stop':
+	                self.request.sendall(KILL_RESP_OK)
+		else:
+			self.request.sendall(resp)
             elif sPage =="/api/get":
                 resp=self.server.MC_Process.proc.stdout.readline()
                 self.request.sendall(resp)
@@ -163,22 +169,33 @@ class MC_Thread(threading.Thread):# thread type
         return self.proc.poll()
     def MC_CmdLine(self):
         # establish memory capacity
+	mem_tot=subprocess.check_call(FREE_MEM_CMD)
         # modify params for memory
+	if mem_tot>2000:
+		mem_param='1G'
+        elif mem_tot>1000:
+                mem_param='1G'
+	else:
+		mem_param='512M'
 	mc_version=_getIniValue('server_version')
 	mc_path='minecraft_server.'+mc_version+'.jar'
-        return ['sudo','java','-Xms512M','-Xmx512M','-jar',mc_path,'nogui']
+        return ['sudo','java','-Xms'+mem_param,'-Xmx'+mem_param,'-jar',mc_path,'nogui']
     def run(self):
-	self.cmd=self.MC_CmdLine()
-        os.chdir('/srv/minecraft')
-        self.proc=subprocess.Popen(self.cmd,stdout=subprocess.PIPE,stdin=subprocess.PIPE,stderr=subprocess.PIPE)
+	try:
+		self.cmd=self.MC_CmdLine()
+        	os.chdir('/srv/minecraft')
+	        self.proc=subprocess.Popen(self.cmd,stdout=subprocess.PIPE,stdin=subprocess.PIPE,stderr=subprocess.PIPE)
 #        self.proc=subprocess.Popen(self.cmd,stdin=subprocess.PIPE)
-        self.MC_Input=self.proc.stdin
-        self.MC_Output=self.proc.stdout
-	while self.Live():
-		outLine=self.MC_Output.readline()
-#        self.MC_Result=subprocess.call(MINECRAFT_CMDLINE, stdin=self.MC_Input,stdout=self.MC_Output,stderr=self.MC_Output)
+	        self.MC_Input=self.proc.stdin
+        	self.MC_Output=self.proc.stdout
+		self.MC_Log=io.open(LOG_FILE,'a')
+		while self.Live():
+			outLine=self.MC_Output.readline()
+			self.MC_Log.writeline(outLine)
+	finally:
+		self.MC_Log.close()
         
-class MC_Server (object):
+class MC_Server:
     """
     This is the base class for the instance's data
     it includes properties for the TCP server for the RPC calls
@@ -187,8 +204,10 @@ class MC_Server (object):
     
     """
     def __init__(self):
+	PORT=_getIntParam('port',sys.argv,8000)
+	HOST =_getStrParam('host',sys.argv,"*")
         self.MC_Process=MC_Thread()
-        self.RPC_Server=SocketServer.TCPServer((HOST, PORT), MyTCPHandler())
+        self.RPC_Server=SocketServer.TCPServer((HOST, PORT), MinecraftTCPHandler())
         self.RPC_Server.MC_Process=self.MC_Process
 
     def keep_running(self):
@@ -218,7 +237,28 @@ Usage
         # interrupt the program with Ctrl-C
         mc_Server.serve_forever()
     elif 'stop' in sys.argv:
-        print "Please connect to the server instance and issue the /stop command"
+#        print "Please connect to the server instance and issue the /stop command"
         # or construct an HTTP request to localhost to stop the service
+	stop_sock=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+	stop_sock.connect(('localhost',PORT))
+	try:
+		stop_sock.sendall(KILL_SIGNAL)
+		amt_rcv=0
+		amt_exp=2
+		while amt_rcv<amt_exp:
+			resp=stop_sock.recv(2)
+			amt_rcv=len(resp)
+		if resp==KILL_RESP_OK:
+			print "Process Killed"
+			reslt=0
+		elif resp==KILL_RESP_BAD:
+			print "Unable to kill process"
+			reslt=1
+		else:
+			print "Bad Response Received"
+			reslt=1
+	finally:
+		stop_sock.close()
+	exit(reslt)
     else:
         print "Unknown Command"
