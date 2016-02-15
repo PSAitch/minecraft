@@ -153,7 +153,7 @@ class MinecraftTCPHandler(SocketServer.BaseRequestHandler):
             elif sPage =="/api/save" and p>0:# save server.properties file
                 param_value=_getStrParam("name",params)
                 if param_value!='':
-                    if _saveMC_PropsFile(param_value)
+                    if _saveMC_PropsFile(param_value):
                         self.request.sendall(KILL_RESP_OK)
                         self.logger.debug("file " +param_value+" saved")
                     else:
@@ -176,7 +176,7 @@ class MinecraftTCPHandler(SocketServer.BaseRequestHandler):
                 self.request.sendall(liFiles)
                 self.logger.debug("properties file list sent")
             elif sPage =="/api/restart" and p>0: # load server.properties list
-                try
+                try:
                     self.server.restart_server()
                     self.request.sendall(KILL_RESP_OK)
                     self.logger.debug("instance restarted")
@@ -225,91 +225,91 @@ class MinecraftTCPHandler(SocketServer.BaseRequestHandler):
 def _getMC_PropsFiles():# construct the list of properties files available as an option list
     return subprocess.check_call(GET_PROPS_CMD)
 
-def _loadMC_PropsFile(file_name)
+def _loadMC_PropsFile(file_name):
     # back up the existing file
     # copy the new file over server.properties
     return 0
 
-def _saveMC_PropsFile(file_name)
+def _saveMC_PropsFile(file_name):
     # save server.properties over new file name
     file_Path=SERVER_ROOT+file_name
     return 0
     
 class MC_Thread(threading.Thread):# thread type
-    """
-    This is the thread that will run the Minecraft proccess
-    it declares properties for accessing the I/O streams
-    When it finishes, it needs to return control to the parent process
-    """
+	"""
+	This is the thread that will run the Minecraft proccess
+	it declares properties for accessing the I/O streams
+	When it finishes, it needs to return control to the parent process
+	"""
 #    def __init__(self):
 #        self.MC_Input=io.StringIO() #stream variable
 #        self.MC_Output=io.StringIO() #stream variable
 #        self.=-1
-    def Live(self):
+	def Live(self):
         # check the value of the result variable
-        return self.proc.poll()
-    def MC_CmdLine(self):
+        	return self.proc.poll()
+	def MC_CmdLine(self):
         # establish memory capacity
-	mem_tot=subprocess.check_call(FREE_MEM_CMD)
-        # modify params for memory
-	if mem_tot>2000:
-		mem_param='2G'
-        elif mem_tot>1000:
-                mem_param='1G'
-	else:
-		mem_param='512M'
-	mc_version=_getIniValue('server_version')
-	mc_path='minecraft_server.'+mc_version+'.jar'
-        return ['sudo','java','-Xms'+mem_param,'-Xmx'+mem_param,'-jar',mc_path,'nogui']
+		mem_tot=subprocess.check_call(FREE_MEM_CMD)
+	        # modify params for memory
+		if mem_tot>2000:
+			mem_param='2G'
+	        elif mem_tot>1000:
+        	        mem_param='1G'
+		else:
+			mem_param='512M'
+		mc_version=_getIniValue('server_version')
+		mc_path='minecraft_server.'+mc_version+'.jar'
+        	return ['sudo','java','-Xms'+mem_param,'-Xmx'+mem_param,'-jar',mc_path,'nogui']
 
-    def run(self):
-	try:
-                self.logger = logging.getLogger(LOGGER_STREAM)
-                self.logger.debug("thread starting")
-		self.cmd=self.MC_CmdLine()
-        	os.chdir(SERVER_ROOT)
-	        self.proc=subprocess.Popen(self.cmd,stdout=subprocess.PIPE,stdin=subprocess.PIPE,stderr=subprocess.PIPE)
-                self.logger.debug("Process Started")
-	        self.MC_Input=self.proc.stdin
-        	self.MC_Output=self.proc.stdout
-		self.MC_Log=io.open(LOG_FILE,'a')
-		while self.Live():
-			outLine=self.MC_Output.readline()
-			self.MC_Log.writeline(outLine)
-	finally:
-                self.logger.debug("thread stopping")
-		self.MC_Log.close()
+	def run(self):
+		try:
+                	self.logger = logging.getLogger(LOGGER_STREAM)
+	                self.logger.debug("thread starting")
+			self.cmd=self.MC_CmdLine()
+        		os.chdir(SERVER_ROOT)
+		        self.proc=subprocess.Popen(self.cmd,stdout=subprocess.PIPE,stdin=subprocess.PIPE,stderr=subprocess.PIPE)
+        	        self.logger.debug("Process Started")
+	        	self.MC_Input=self.proc.stdin
+	        	self.MC_Output=self.proc.stdout
+			self.MC_Log=io.open(LOG_FILE,'a')
+			while self.Live():
+				outLine=self.MC_Output.readline()
+				self.MC_Log.writeline(outLine)
+		finally:
+                	self.logger.debug("thread stopping")
+			self.MC_Log.close()
         
 class MC_Server(SocketServer.TCPServer):
-"""
-    This is the base class for the instance's data
-    it needs to be multithreaded.    
-    """
-    def __init__(self,request,client_address,server):
-        self.logger = logging.getLogger(LOGGER_STREAM)
-        self.logger.debug('__init__')
-        SocketServer.BaseRequestHandler.__init__(self, request, client_address, server)
-        self.MC_Process=MC_Thread()
-        self.restarting=0
+	"""
+	This is the base class for the instance's data
+	    it needs to be multithreaded.    
+	"""
+	def __init__(self,client_address,request_handler):
+	        self.logger = logging.getLogger(LOGGER_STREAM)
+	        self.logger.debug('__init__')
+	        SocketServer.TCPServer.__init__(self, client_address,request_handler)
+	        self.MC_Process=MC_Thread()
+	        self.restarting=0
 
-    def keep_running(self):
-        return self.MC_Process.is_alive() or self.restarting==1
+	def keep_running(self):
+        	return self.MC_Process.is_alive() or self.restarting==1
 
-    def serve_forever(self):
-        self.MC_Process.start()
-        while self.keep_running() :
-            self.handle_request()
+	def serve_forever(self):
+        	self.MC_Process.start()
+	        while self.keep_running() :
+        		self.handle_request()
 
-    def restart_server(self):
-        self.logger.debug('Restarting')
-        self.restarting=1
-        Kill_Minecraft()
-        while self.MC_Process.is_alive()
-            time.sleep(1)
-        self.MC_Process=MC_Thread()
-        self.MC_Process.start()
-        self.restarting=0        
-        self.logger.debug('Restarted')
+	def restart_server(self):
+        	self.logger.debug('Restarting')
+	        self.restarting=1
+        	Kill_Minecraft()
+	        while self.MC_Process.is_alive():
+        		time.sleep(1)
+	        self.MC_Process=MC_Thread()
+        	self.MC_Process.start()
+	        self.restarting=0        
+        	self.logger.debug('Restarted')
 
 def Detect_Minecraft():
     return subprocess.check_call(GET_STATUS_CMD)
