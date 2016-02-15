@@ -124,15 +124,16 @@ case $1 in
 		sudo python /usr/src/minecraft_server.py stop
 		;;
 	status)
-		MC_STATUS="$(sudo ps all | grep java | grep -v grep | tr -d '[[:space:]]')"
-		if [ -z $MC_STATUS ] ; then
-			echo "Minecraft Not Running"
-			exit 1
-		else
-			echo $MC_STATUS
-			echo "minecraft running"
-			exit 0
-		fi
+#		MC_STATUS="$(sudo ps all | grep java | grep -v grep | tr -d '[[:space:]]')"
+#		if [ -z $MC_STATUS ] ; then
+#			echo "Minecraft Not Running"
+#			exit 1
+#		else
+#			echo $MC_STATUS
+#			echo "minecraft running"
+#			exit 0
+#		fi
+		sudo python /usr/src/minecraft_server.py status
 		;;
 	*)
 		echo "Usage mc [ parameters | test | check ]"
