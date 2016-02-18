@@ -21,16 +21,22 @@ case $1 in
 	disable)
                 sudo update-rc.d minecraft disable
 		;;
+	configure)
+		sudo adduser -U  minecraft -m -b /srv
+		sudo passwd minecraft
+		;;
 	test)
 #		sudo python /usr/src/minecraft_server.py $2
 		if sudo service minecraft $2 ; then
-			echo "Minecraft Service started"
+			echo "Test Command Successful"
 		else
 	               sudo python /usr/src/minecraft_server.py $2
 		fi
 		;;
 	*)
 		echo "Usage"
+		echo "	mc configure "
+		echo "Set up user and root folder"
 		echo "	mc [ deploy | remove ]"
 		echo "copy files"
 		echo "	mc [ install | regress ]"
