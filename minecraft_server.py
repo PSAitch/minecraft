@@ -139,43 +139,19 @@ class MinecraftTCPHandler(SocketServer.BaseRequestHandler):
                 params=self.data[p:end].split("&")
             else:
                 sPage=self.data[sp:p-1]
-            if sPage =="/api/set" and p>0:# set server property
-                param_key=_getStrParam("key",params)
-                param_value=_getStrParam("value",params)
-                _setMC_Value(param_key,param_value)
-                self.request.sendall(param_value)
-                self.logger.debug("property " +param_key+" set to " + param_value)
-            elif sPage =="/api/get" and p>0: # get server property
-                param_key=_getStrParam("key",params)
-                param_value=_getMC_Value(param_key)
-                self.request.sendall(param_value)
-                self.logger.debug("property " +param_key+" requested")
-            elif sPage =="/api/save" and p>0:# save server.properties file
-                param_value=_getStrParam("name",params)
-                if param_value!='':
-                    if _saveMC_PropsFile(param_value):
-                        self.request.sendall(KILL_RESP_OK)
-                        self.logger.debug("file " +param_value+" saved")
-                    else:
-                        self.request.sendall(KILL_RESP_BAD)
-                        self.logger.debug("file " +param_value+" not saved")
-                else:
-                    self.request.sendall(KILL_RESP_BAD)
-                    self.logger.debug("No name parameter supplied")
-            elif sPage =="/api/load" and p>0: # load server.properties file
-                param_value=_getStrParam("name",params)
-                if param_value!="":
-                    _loadMC_PropsFile(param_value)
-                    self.request.sendall(KILL_RESP_OK)
-                    self.logger.debug("loaded " +param_key+" file")
-                else:
-                    self.request.sendall(KILL_RESP_BAD)
-                    self.logger.debug("Unable to load " +param_key+" file")
-            elif sPage =="/api/list" and p>0: # load server.properties list
-                liFiles=_getMC_PropsFiles()
-                self.request.sendall(liFiles)
-                self.logger.debug("properties file list sent")
-            elif sPage =="/api/restart" and p>0: # load server.properties list
+#            if sPage =="/api/set" and p>0:# set server property
+#                param_key=_getStrParam("key",params)
+#                param_value=_getStrParam("value",params)
+#                _setMC_Value(param_key,param_value)
+#                self.request.sendall(param_value)
+#                self.logger.debug("property " +param_key+" set to " + param_value)
+#            elif sPage =="/api/get" and p>0: # get server property
+#                param_key=_getStrParam("key",params)
+#                param_value=_getMC_Value(param_key)
+#                self.request.sendall(param_value)
+#                self.logger.debug("property " +param_key+" requested")
+#            elif sPage =="/api/restart" and p>0: # load server.properties list
+            if sPage =="/api/restart" and p>0: # load server.properties list
                 try:
                     self.server.restart_server()
                     self.request.sendall(KILL_RESP_OK)
@@ -197,13 +173,6 @@ class MinecraftTCPHandler(SocketServer.BaseRequestHandler):
                 resp=fLogfile.readall()
                 self.request.sendall(resp)
                 self.logger.debug("Console requested")
-            elif sPage =="/api/params":
-                # send the contents of the config file
-                # perhaps do this as a form which submits
-                fConfig=io.open(INI_FILE)
-                resp=fConfig.readall()
-                self.request.sendall(resp)
-                self.logger.debug("config requested")
             else:
                 print "|"+sPage+"|"
                 raise TypeError
@@ -372,7 +341,7 @@ Usage
     elif 'status' in sys.argv:
 	is_alive=Detect_Minecraft()
         if is_alive==0 :
-            print "Minecraft Server is Live"
+            print "Minecraft Server is running"
         exit(is_alive)
     else:
         print "Unknown Command"
