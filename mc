@@ -35,8 +35,6 @@ case $1 in
 		echo "copy files"
 		echo "	mc [ install | regress ]"
 		echo "register or deregister service"
-		echo "	mc [ enable | disable ]"
-		echo "control status of service"
 		echo "	mc test [ start | stop | status ] "
 		echo "test the minecraft server script"
 		;;
