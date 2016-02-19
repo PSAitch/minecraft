@@ -6,20 +6,14 @@ case $1 in
 		sudo cp minecraft /etc/init.d
 		;;
 	install)
-		sudo update-rc.d minecraft defaults
+		sudo chkconfig minecraft on
 		;;
 	regress)
-                sudo update-rc.d minecraft remove -f
+                sudo chkconfig minecraft off
 		;;
 	remove)
 		sudo rm /usr/src/minecraft_server.py
 		sudo rm /etc/init.d/minecraft
-		;;
-	enable)
-                sudo update-rc.d minecraft enable
-		;;
-	disable)
-                sudo update-rc.d minecraft disable
 		;;
 	configure)
 		sudo adduser -U  minecraft -m -b /srv
