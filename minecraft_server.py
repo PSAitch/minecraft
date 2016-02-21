@@ -217,6 +217,7 @@ class MC_Thread(threading.Thread):# thread type
 	def Live(self):
         # check the value of the result variable
         	return self.proc.poll()
+        	
 	def MC_CmdLine(self):
         # establish memory capacity
 		mem_tot=subprocess.check_call(FREE_MEM_CMD)
@@ -248,34 +249,56 @@ class MC_Thread(threading.Thread):# thread type
 		finally:
                 	self.logger.debug("thread stopping")
 			self.MC_Log.close()
-        
-class MC_Server(SocketServer.TCPServer):
+			
+	def writeline(send_text):
+		self.MC_Input.writeline(send_text)
+
+class MC_Webserver(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
+	# Web Server for threaded connections to allow access to the server properties
+	# it spawns new threads for each request it receives
+	def writeline(send_text):
+		self.MC_Process.writeline(send_text)		
+    
+class MC_Server(Object):
 	"""
 	This is the base class for the instance's data
 	    it needs to be multithreaded.    
 	"""
-	def __init__(self,client_address,request_handler):
+	def __init__(self):
 	        self.logger = logging.getLogger(LOGGER_STREAM)
 	        self.logger.debug('__init__')
-	        SocketServer.TCPServer.__init__(self, client_address,request_handler)
+	        self.WebServer= MC_Webserver(server_address, MinecraftTCPHandler)
+	        # Start a thread with the server -- that thread will then start one
+    		# more thread for each request
+    		self.WebServer_thread = threading.Thread(target=WebServer.serve_forever)
+    		# Exit the server thread when the main thread terminates
+    		self.WebServer_thread.daemon = True
 	        self.MC_Process=MC_Thread()
+	        self.WebServer.MC_Process=self.MC_Process
 	        self.restarting=0
 
 	def keep_running(self):
         	return self.MC_Process.is_alive() or self.restarting==1
-
+        	
 	def serve_forever(self):
+	        self.logger.debug('serve_forever')
+		# start the web server thread
+    		self.WebServer_thread.start()
+    		# start the minecraft process
         	self.MC_Process.start()
 	        while self.keep_running() :
-        		self.handle_request()
+	        	time.sleep(1)
+#        		self.handle_request()
+	        self.logger.debug('forever has come')
 
 	def restart_server(self):
-        	self.logger.debug('Restarting')
+        	self.logger.debug('restart_server')
 	        self.restarting=1
         	Kill_Minecraft()
 	        while self.MC_Process.is_alive():
         		time.sleep(1)
 	        self.MC_Process=MC_Thread()
+	        self.WebServer.MC_Process=self.MC_Process
         	self.MC_Process.start()
 	        self.restarting=0        
         	self.logger.debug('Restarted')
@@ -331,7 +354,8 @@ Usage
         """
     elif 'start' in sys.argv:
 #        mc_Server=MC_Server()
-        mc_Server=MC_Server((HOST,PORT),MinecraftTCPHandler)
+#        mc_Server=MC_Server((HOST,PORT),MinecraftTCPHandler)
+        mc_Server=MC_Server(HOST,PORT)
         # Activate the server; this will keep running until you
         # interrupt the program with Ctrl-C
         mc_Server.serve_forever()
