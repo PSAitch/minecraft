@@ -22,6 +22,8 @@ python file which runs the service
 
 ### TODO
 * index.htm which enables access to the web admin tool
-  * shows the server properties and allows for their management using the form provided by the web service
-  * shows the service properties and allows for that configuration, e.g. server version, auto-start
-  * has form for sending commands and frame for console responses
+  * tabs or table cells for server parameters form, console input / output frame
+* need to convert the server to a HTTPServer object which handles put and get requests returning HTML
+ * PUT requests to set server parameters and config, and send commands to the server
+ * GET requests to return the server parameters form and console output
+* need to have a config flag which sets autostart
